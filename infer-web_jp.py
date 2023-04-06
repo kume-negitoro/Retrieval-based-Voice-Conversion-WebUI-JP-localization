@@ -514,7 +514,7 @@ with gr.Blocks() as app:
                     with gr.Column():
                         model_choose = gr.Dropdown(label="モデル", choices=uvr5_names)
                         opt_vocal_root = gr.Textbox(label="出力するボーカルフォルダを指定",value="opt")
-                        opt_ins_root = gr.Textbox(label="出力するインストフォルダーを指定",value="opt")
+                        opt_ins_root = gr.Textbox(label="出力するインストフォルダを指定",value="opt")
                     but2=gr.Button("変換", variant="primary")
                     vc_output4 = gr.Textbox(label="出力情報")
                     but2.click(uvr, [model_choose, dir_wav_input,opt_vocal_root,wav_inputs,opt_ins_root], [vc_output4])
