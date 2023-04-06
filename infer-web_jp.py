@@ -450,7 +450,7 @@ with gr.Blocks() as app:
                     inputs=[],
                     outputs=[sid0]
                 )
-                clean_button = gr.Button("音色省メモリの開放", variant="primary")
+                clean_button = gr.Button("音色をアンインストールしてメモリを開放", variant="primary")
                 spk_item = gr.Slider(minimum=0, maximum=2333, step=1, label='スピーカーIDを選択', value=0, visible=False, interactive=True)
                 clean_button.click(
                     fn=clean,
@@ -468,9 +468,9 @@ with gr.Blocks() as app:
                     """)
                 with gr.Row():
                     with gr.Column():
-                        vc_transform0 = gr.Number(label="変調（整数，半音数，昇オクターブ12降オクターブ12）", value=0)
+                        vc_transform0 = gr.Number(label="キー変更（整数，半音数，半音12上げる、半音12下げる）", value=0)
                         input_audio0 = gr.Textbox(label="処理対象のオーディオファイルのパスを入力(デフォルトは正しいフォーマットの例)",value="E:\codes\py39\\vits_vc_gpu_train\\todo-songs\冬之花clip1.wav")
-                        f0method0=gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで速度を上げることができる、harvest低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
+                        f0method0=gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで速度を上げることができる、harvestは低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
                     with gr.Column():
                         file_index1 = gr.Textbox(label="機能検索ライブラリのファイルパス",value="E:\codes\py39\\vits_vc_gpu_train\logs\mi-test-1key\\added_IVF677_Flat_nprobe_7.index", interactive=True)
                         file_big_npy1 = gr.Textbox(label="機能ファイルパス",value="E:\codes\py39\\vits_vc_gpu_train\logs\mi-test-1key\\total_fea.npy", interactive=True)
@@ -487,9 +487,9 @@ with gr.Blocks() as app:
                     """)
                 with gr.Row():
                     with gr.Column():
-                        vc_transform1 = gr.Number(label="変調（整数，半音数，昇オクターブ12降オクターブ12）", value=0)
+                        vc_transform1 = gr.Number(label="キー変更（整数，半音数，半音12上げる、半音12下げる）", value=0)
                         opt_input = gr.Textbox(label="出力フォルダの指定",value="opt")
-                        f0method1=gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで速度を上げることができる、harvest低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
+                        f0method1=gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで速度を上げることができる、harvestは低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
                     with gr.Column():
                         file_index2 = gr.Textbox(label="機能検索ライブラリのファイルパス",value="E:\codes\py39\\vits_vc_gpu_train\logs\mi-test-1key\\added_IVF677_Flat_nprobe_7.index", interactive=True)
                         file_big_npy2 = gr.Textbox(label="機能ファイルパス",value="E:\codes\py39\\vits_vc_gpu_train\logs\mi-test-1key\\total_fea.npy", interactive=True)
