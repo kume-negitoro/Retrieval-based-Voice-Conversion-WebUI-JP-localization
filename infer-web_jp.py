@@ -437,11 +437,11 @@ def change_info_(ckpt_path):
 
 with gr.Blocks() as app:
     gr.Markdown(value="""
-        本ソフトウェアはMITライセンスによるオープンソースであり、作者は本ソフトウェアに対していかなる管理も行っていません。 本ソフトウェアの使用者および本ソフトウェアから書き出した音を配布する者は、単独で責任を負うものとします。<br>
+        本ソフトウェアはMITライセンスによるオープンソースであり、作者は本ソフトウェアに対していかなる管理も行っていません。 本ソフトウェアの使用者および本ソフトウェアから書き出した音源を配布する者は、各自責任を負うものとします。<br>
         この条項に同意されない場合は、パッケージ内のコードやファイルを使用したり参照したりすることはできません。 詳しくはルートディレクトリの「使用条件 - LICENSE.txt」をご覧ください。
         """)
     with gr.Tabs():
-        with gr.TabItem("モデル推理"):
+        with gr.TabItem("モデル推論"):
             with gr.Row():
                 sid0 = gr.Dropdown(label="推論音色", choices=names)
                 refresh_button = gr.Button("音色リストを更新", variant="primary")
@@ -450,7 +450,7 @@ with gr.Blocks() as app:
                     inputs=[],
                     outputs=[sid0]
                 )
-                clean_button = gr.Button("音色省メモリのアンインストール", variant="primary")
+                clean_button = gr.Button("音色省メモリの開放", variant="primary")
                 spk_item = gr.Slider(minimum=0, maximum=2333, step=1, label='スピーカーIDを選択', value=0, visible=False, interactive=True)
                 clean_button.click(
                     fn=clean,
@@ -488,8 +488,8 @@ with gr.Blocks() as app:
                 with gr.Row():
                     with gr.Column():
                         vc_transform1 = gr.Number(label="変調（整数，半音数，昇オクターブ12降オクターブ12）", value=0)
-                        opt_input = gr.Textbox(label="指定输出文件夹",value="opt")
-                        f0method1=gr.Radio(label="音高抽出アルゴリズムを選択すると、入力歌声はpmで速度を上げることができる、ハーベスト低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
+                        opt_input = gr.Textbox(label="出力フォルダの指定",value="opt")
+                        f0method1=gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで速度を上げることができる、harvest低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
                     with gr.Column():
                         file_index2 = gr.Textbox(label="機能検索ライブラリのファイルパス",value="E:\codes\py39\\vits_vc_gpu_train\logs\mi-test-1key\\added_IVF677_Flat_nprobe_7.index", interactive=True)
                         file_big_npy2 = gr.Textbox(label="機能ファイルパス",value="E:\codes\py39\\vits_vc_gpu_train\logs\mi-test-1key\\total_fea.npy", interactive=True)
@@ -505,7 +505,7 @@ with gr.Blocks() as app:
                 gr.Markdown(value="""
                     UVR5モデルによる伴奏ボーカル分離バッチ処理。<br>
                     ハーモニー用HP2なし、ハーモニー付きで抽出する人の声はハーモニー用HP5不要<br>
-                    適切なフォルダパスフォーマットの例:E:\codes\py39\\vits_vc_gpu\シラサギの霜花テスト(ファイルマネージャのアドレスバーにコピー)
+                    適切なフォルダパスフォーマットの例:E:\codes\py39\\vits_vc_gpu\白鹭霜华测试样例(ファイルマネージャのアドレスバーにコピー)
                     """)
                 with gr.Row():
                     with gr.Column():
@@ -546,7 +546,7 @@ with gr.Blocks() as app:
                         gpu_info9 = gr.Textbox(label="グラフィックスカード情報",value=gpu_info)
                     with gr.Column():
                         np7 = gr.Slider(minimum=0, maximum=ncpu, step=1, label='ピッチの抽出に使用したCPUプロセス数', value=ncpu,interactive=True)
-                        f0method8 = gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力音声はpmで高速化可能、高音質だがCPUが貧弱、dioで高速化可能、収穫品質は良いが遅い", choices=["pm", "harvest","dio"], value="harvest", interactive=True)
+                        f0method8 = gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで高速化、高品質な音声はdioで高速化、harvest品質は良いが遅い", choices=["pm", "harvest","dio"], value="harvest", interactive=True)
                     but2=gr.Button("特徴抽出", variant="primary")
                     info2=gr.Textbox(label="出力情報",value="",max_lines=8)
                     but2.click(extract_f0_feature,[gpus6,np7,f0method8,if_f0_3,exp_dir1],[info2])
