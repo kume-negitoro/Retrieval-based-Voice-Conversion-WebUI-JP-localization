@@ -1,0 +1,1 @@
+runtime\python.exe infer-web_jp.py
