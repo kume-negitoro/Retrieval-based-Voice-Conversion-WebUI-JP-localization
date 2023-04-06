@@ -464,7 +464,7 @@ with gr.Blocks() as app:
                 )
             with gr.Group():
                 gr.Markdown(value="""
-                    男性から女性へは+12key、女性から男性へは-12keyを推奨、音域や音色の歪みにつながる場合は、自分で正しい音域に調整することも可能。
+                    男性から女性へは+12key、女性から男性へは-12keyを推奨、モデルの音域が曲から離れている場合は、自分で正しい音域に調整することも可能。
                     """)
                 with gr.Row():
                     with gr.Column():
