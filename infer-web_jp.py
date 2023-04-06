@@ -470,7 +470,7 @@ with gr.Blocks() as app:
                     with gr.Column():
                         vc_transform0 = gr.Number(label="変調（整数，半音数，昇オクターブ12降オクターブ12）", value=0)
                         input_audio0 = gr.Textbox(label="処理対象のオーディオファイルのパスを入力(デフォルトは正しいフォーマットの例)",value="E:\codes\py39\\vits_vc_gpu_train\\todo-songs\冬之花clip1.wav")
-                        f0method0=gr.Radio(label="音高抽出アルゴリズムを選択すると、入力歌声はpmで速度を上げることができる、ハーベスト低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
+                        f0method0=gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで速度を上げることができる、harvest低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
                     with gr.Column():
                         file_index1 = gr.Textbox(label="機能検索ライブラリのファイルパス",value="E:\codes\py39\\vits_vc_gpu_train\logs\mi-test-1key\\added_IVF677_Flat_nprobe_7.index", interactive=True)
                         file_big_npy1 = gr.Textbox(label="機能ファイルパス",value="E:\codes\py39\\vits_vc_gpu_train\logs\mi-test-1key\\total_fea.npy", interactive=True)
