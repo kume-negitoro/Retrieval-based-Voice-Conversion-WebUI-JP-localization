@@ -285,7 +285,7 @@ def click_train(exp_dir1,sr2,if_f0_3,spk_id5,save_epoch10,total_epoch11,batch_si
     os.makedirs(exp_dir,exist_ok=True)
     gt_wavs_dir="%s/0_gt_wavs"%(exp_dir)
     co256_dir="%s/3_feature256"%(exp_dir)
-    if(if_f0_3=="是"):
+    if(if_f0_3=="はい"):
         f0_dir = "%s/2a_f0" % (exp_dir)
         f0nsf_dir="%s/2b-f0nsf"%(exp_dir)
         names=set([name.split(".")[0]for name in os.listdir(gt_wavs_dir)])&set([name.split(".")[0]for name in os.listdir(co256_dir)])&set([name.split(".")[0]for name in os.listdir(f0_dir)])&set([name.split(".")[0]for name in os.listdir(f0nsf_dir)])
@@ -354,14 +354,14 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
     with open("%s/logs/%s/preprocess.log" % (now_dir, exp_dir1), "r")as f: print(f.read())
     #########step2a:提取音高
     open("%s/logs/%s/extract_f0_feature.log" % (now_dir, exp_dir1), "w")
-    if(if_f0_3=="是"):
+    if(if_f0_3=="はい"):
         yield get_info_str("step2a:ピッチの抽出中")
         cmd="runtime\python.exe extract_f0_print.py %s/logs/%s %s %s"%(now_dir,exp_dir1,np7,f0method8)
         yield get_info_str(cmd)
         p = Popen(cmd, shell=True,cwd=now_dir)
         p.wait()
         with open("%s/logs/%s/extract_f0_feature.log"%(now_dir,exp_dir1), "r")as f:print(f.read())
-    else:yield get_info_str("step2a:ピッチの抽出中")
+    else:yield get_info_str("step2a:ピッチの抽出は不要")
     #######step2b:提取特征
     yield get_info_str("step2b:抽出される特徴量")
     gpus=gpus16.split("-")
@@ -394,7 +394,7 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
             opt.append("%s/%s.wav|%s/%s.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,spk_id5))
     with open("%s/filelist.txt"%exp_dir,"w")as f:f.write("\n".join(opt))
     yield get_info_str("write filelist done")
-    cmd = "runtime\python.exe train_nsf_sim_cache_sid_load_pretrain.py -e %s -sr %s -f0 %s -bs %s -g %s -te %s -se %s -pg %s -pd %s -l %s -c %s" % (exp_dir1,sr2,1 if if_f0_3=="はい"else 0,batch_size12,gpus16,total_epoch11,save_epoch10,pretrained_G14,pretrained_D15,1 if if_save_latest13=="是"else 0,1 if if_cache_gpu17=="はい"else 0)
+    cmd = "runtime\python.exe train_nsf_sim_cache_sid_load_pretrain.py -e %s -sr %s -f0 %s -bs %s -g %s -te %s -se %s -pg %s -pd %s -l %s -c %s" % (exp_dir1,sr2,1 if if_f0_3=="はい"else 0,batch_size12,gpus16,total_epoch11,save_epoch10,pretrained_G14,pretrained_D15,1 if if_save_latest13=="はい"else 0,1 if if_cache_gpu17=="はい"else 0)
     yield get_info_str(cmd)
     p = Popen(cmd, shell=True, cwd=now_dir)
     p.wait()
@@ -450,7 +450,7 @@ with gr.Blocks() as app:
                     inputs=[],
                     outputs=[sid0]
                 )
-                clean_button = gr.Button("音色をアンインストールしてメモリを開放", variant="primary")
+                clean_button = gr.Button("音色をアンインストールしてVRAMを開放", variant="primary")
                 spk_item = gr.Slider(minimum=0, maximum=2333, step=1, label='スピーカーIDを選択', value=0, visible=False, interactive=True)
                 clean_button.click(
                     fn=clean,
@@ -546,7 +546,7 @@ with gr.Blocks() as app:
                         gpu_info9 = gr.Textbox(label="グラフィックスカード情報",value=gpu_info)
                     with gr.Column():
                         np7 = gr.Slider(minimum=0, maximum=ncpu, step=1, label='ピッチの抽出に使用したCPUプロセス数', value=ncpu,interactive=True)
-                        f0method8 = gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで高速化、高品質な音声はdioで高速化、harvest品質は良いが遅い", choices=["pm", "harvest","dio"], value="harvest", interactive=True)
+                        f0method8 = gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで高速化、高品質な音声はdioで高速化、harvestは品質は良いが遅い", choices=["pm", "harvest","dio"], value="harvest", interactive=True)
                     but2=gr.Button("特徴抽出", variant="primary")
                     info2=gr.Textbox(label="出力情報",value="",max_lines=8)
                     but2.click(extract_f0_feature,[gpus6,np7,f0method8,if_f0_3,exp_dir1],[info2])
