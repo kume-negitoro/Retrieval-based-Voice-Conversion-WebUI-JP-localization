@@ -1,9 +1,10 @@
 from multiprocessing import cpu_count
 import threading
 from time import sleep
-from subprocess import Popen,PIPE,run as runn
+from subprocess import Popen
 from time import sleep
-import torch, pdb, os,traceback,sys,warnings,shutil,numpy as np,faiss
+import torch, os,traceback,sys,warnings,shutil,numpy as np
+import faiss
 #判断是否有能用来训练和加速推理的N卡
 ncpu=cpu_count()
 ngpu=torch.cuda.device_count()
@@ -33,11 +34,9 @@ from infer_pack.models import SynthesizerTrnMs256NSFsid, SynthesizerTrnMs256NSFs
 from scipy.io import wavfile
 from fairseq import checkpoint_utils
 import gradio as gr
-import librosa
 import logging
 from vc_infer_pipeline import VC
-import soundfile as sf
-from config import is_half,device,is_half
+from config import is_half,device,is_half,python_cmd,listen_port,iscolab,noparallel
 from infer_uvr5 import _audio_pre_
 from my_utils import load_audio
 from train.process_ckpt import show_info,change_info,merge,extract_small_model
@@ -64,9 +63,11 @@ def load_hubert():
 weight_root="weights"
 weight_uvr5_root="uvr5_weights"
 names=[]
-for name in os.listdir(weight_root):names.append(name)
+for name in os.listdir(weight_root):
+    if name.endswith(".pth"): names.append(name)
 uvr5_names=[]
-for name in os.listdir(weight_uvr5_root):uvr5_names.append(name.replace(".pth",""))
+for name in os.listdir(weight_uvr5_root):
+    if name.endswith(".pth"): uvr5_names.append(name.replace(".pth",""))
 
 def vc_single(sid,input_audio,f0_up_key,f0_file,f0_method,file_index,file_big_npy,index_rate):#spk_item, input_audio0, vc_transform0,f0_file,f0method0
     global tgt_sr,net_g,vc,hubert_model
@@ -145,10 +146,10 @@ def uvr(model_name,inp_root,save_root_vocal,paths,save_root_ins):
 #一个选项卡全局只能有一个音色
 def get_vc(sid):
     global n_spk,tgt_sr,net_g,vc,cpt
-    if(sid==""):
+    if(sid==[]):
         global hubert_model
         print("clean_empty_cache")
-        del net_g, n_spk, vc, hubert_model,tgt_sr#,cpt
+        del n_spk, vc, hubert_model,tgt_sr#,cpt
         hubert_model = net_g=n_spk=vc=hubert_model=tgt_sr=None
         torch.cuda.empty_cache()
         ###楼下不这么折腾清理不干净
@@ -180,10 +181,14 @@ def get_vc(sid):
     n_spk=cpt["config"][-3]
     return {"visible": True,"maximum": n_spk, "__type__": "update"}
 
-def change_choices():return {"choices": sorted(list(os.listdir(weight_root))), "__type__": "update"}
+def change_choices():
+    names=[]
+    for name in os.listdir(weight_root):
+        if name.endswith(".pth"): names.append(name)
+    return {"choices": sorted(names), "__type__": "update"}
 def clean():return {"value": "", "__type__": "update"}
 def change_f0(if_f0_3,sr2):#np7, f0method8,pretrained_G14,pretrained_D15
-    if(if_f0_3=="はい"):return {"visible": True, "__type__": "update"},{"visible": True, "__type__": "update"},"pretrained/f0G%s.pth"%sr2,"pretrained/f0D%s.pth"%sr2
+    if(if_f0_3=="是"):return {"visible": True, "__type__": "update"},{"visible": True, "__type__": "update"},"pretrained/f0G%s.pth"%sr2,"pretrained/f0D%s.pth"%sr2
     return {"visible": False, "__type__": "update"}, {"visible": False, "__type__": "update"},"pretrained/G%s.pth"%sr2,"pretrained/D%s.pth"%sr2
 
 sr_dict={
@@ -217,7 +222,7 @@ def preprocess_dataset(trainset_dir,exp_dir,sr,n_p=ncpu):
     os.makedirs("%s/logs/%s"%(now_dir,exp_dir),exist_ok=True)
     f = open("%s/logs/%s/preprocess.log"%(now_dir,exp_dir), "w")
     f.close()
-    cmd="runtime\python.exe trainset_preprocess_pipeline_print.py %s %s %s %s/logs/%s"%(trainset_dir,sr,n_p,now_dir,exp_dir)
+    cmd=python_cmd + " trainset_preprocess_pipeline_print.py %s %s %s %s/logs/%s "%(trainset_dir,sr,n_p,now_dir,exp_dir)+str(noparallel)
     print(cmd)
     p = Popen(cmd, shell=True)#, stdin=PIPE, stdout=PIPE,stderr=PIPE,cwd=now_dir
     ###煞笔gr，popen read都非得全跑完了再一次性读取，不用gr就正常读一句输出一句;只能额外弄出一个文本流定时读
@@ -232,12 +237,12 @@ def preprocess_dataset(trainset_dir,exp_dir,sr,n_p=ncpu):
     yield log
 #but2.click(extract_f0,[gpus6,np7,f0method8,if_f0_3,trainset_dir4],[info2])
 def extract_f0_feature(gpus,n_p,f0method,if_f0,exp_dir):
-    gpus=gpus.split("-")#
+    gpus=gpus.split("-")
     os.makedirs("%s/logs/%s"%(now_dir,exp_dir),exist_ok=True)
     f = open("%s/logs/%s/extract_f0_feature.log"%(now_dir,exp_dir), "w")
     f.close()
-    if(if_f0=="はい"):
-        cmd="runtime\python.exe extract_f0_print.py %s/logs/%s %s %s"%(now_dir,exp_dir,n_p,f0method)
+    if(if_f0=="是"):
+        cmd=python_cmd + " extract_f0_print.py %s/logs/%s %s %s"%(now_dir,exp_dir,n_p,f0method)
         print(cmd)
         p = Popen(cmd, shell=True,cwd=now_dir)#, stdin=PIPE, stdout=PIPE,stderr=PIPE
         ###煞笔gr，popen read都非得全跑完了再一次性读取，不用gr就正常读一句输出一句;只能额外弄出一个文本流定时读
@@ -261,7 +266,7 @@ def extract_f0_feature(gpus,n_p,f0method,if_f0,exp_dir):
     leng=len(gpus)
     ps=[]
     for idx,n_g in enumerate(gpus):
-        cmd="runtime\python.exe extract_feature_print.py %s %s %s %s/logs/%s"%(leng,idx,n_g,now_dir,exp_dir)
+        cmd=python_cmd + " extract_feature_print.py %s %s %s %s/logs/%s"%(leng,idx,n_g,now_dir,exp_dir)
         print(cmd)
         p = Popen(cmd, shell=True, cwd=now_dir)#, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=now_dir
         ps.append(p)
@@ -276,7 +281,7 @@ def extract_f0_feature(gpus,n_p,f0method,if_f0,exp_dir):
     print(log)
     yield log
 def change_sr2(sr2,if_f0_3):
-    if(if_f0_3=="はい"):return "pretrained/f0G%s.pth"%sr2,"pretrained/f0D%s.pth"%sr2
+    if(if_f0_3=="是"):return "pretrained/f0G%s.pth"%sr2,"pretrained/f0D%s.pth"%sr2
     else:return "pretrained/G%s.pth"%sr2,"pretrained/D%s.pth"%sr2
 #but3.click(click_train,[exp_dir1,sr2,if_f0_3,save_epoch10,total_epoch11,batch_size12,if_save_latest13,pretrained_G14,pretrained_D15,gpus16])
 def click_train(exp_dir1,sr2,if_f0_3,spk_id5,save_epoch10,total_epoch11,batch_size12,if_save_latest13,pretrained_G14,pretrained_D15,gpus16,if_cache_gpu17):
@@ -293,7 +298,7 @@ def click_train(exp_dir1,sr2,if_f0_3,spk_id5,save_epoch10,total_epoch11,batch_si
         names=set([name.split(".")[0]for name in os.listdir(gt_wavs_dir)])&set([name.split(".")[0]for name in os.listdir(co256_dir)])
     opt=[]
     for name in names:
-        if (if_f0_3 == "はい"):
+        if (if_f0_3 == "是"):
             opt.append("%s/%s.wav|%s/%s.npy|%s/%s.wav.npy|%s/%s.wav.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,f0_dir.replace("\\","\\\\"),name,f0nsf_dir.replace("\\","\\\\"),name,spk_id5))
         else:
             opt.append("%s/%s.wav|%s/%s.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,spk_id5))
@@ -304,8 +309,12 @@ def click_train(exp_dir1,sr2,if_f0_3,spk_id5,save_epoch10,total_epoch11,batch_si
     with open("%s/filelist.txt"%exp_dir,"w")as f:f.write("\n".join(opt))
     print("write filelist done")
     #生成config#无需生成config
-    # cmd = "runtime\python.exe train_nsf_sim_cache_sid_load_pretrain.py -e mi-test -sr 40k -f0 1 -bs 4 -g 0 -te 10 -se 5 -pg pretrained/f0G40k.pth -pd pretrained/f0D40k.pth -l 1 -c 0"
-    cmd = "runtime\python.exe train_nsf_sim_cache_sid_load_pretrain.py -e %s -sr %s -f0 %s -bs %s -g %s -te %s -se %s -pg %s -pd %s -l %s -c %s" % (exp_dir1,sr2,1 if if_f0_3=="はい"else 0,batch_size12,gpus16,total_epoch11,save_epoch10,pretrained_G14,pretrained_D15,1 if if_save_latest13=="はい"else 0,1 if if_cache_gpu17=="はい"else 0)
+    # cmd = python_cmd + " train_nsf_sim_cache_sid_load_pretrain.py -e mi-test -sr 40k -f0 1 -bs 4 -g 0 -te 10 -se 5 -pg pretrained/f0G40k.pth -pd pretrained/f0D40k.pth -l 1 -c 0"
+    print("use gpus:",gpus16)
+    if gpus16:
+        cmd = python_cmd + " train_nsf_sim_cache_sid_load_pretrain.py -e %s -sr %s -f0 %s -bs %s -g %s -te %s -se %s -pg %s -pd %s -l %s -c %s" % (exp_dir1,sr2,1 if if_f0_3=="是"else 0,batch_size12,gpus16,total_epoch11,save_epoch10,pretrained_G14,pretrained_D15,1 if if_save_latest13=="是"else 0,1 if if_cache_gpu17=="是"else 0)
+    else:
+        cmd = python_cmd + " train_nsf_sim_cache_sid_load_pretrain.py -e %s -sr %s -f0 %s -bs %s -te %s -se %s -pg %s -pd %s -l %s -c %s" % (exp_dir1,sr2,1 if if_f0_3=="是"else 0,batch_size12,total_epoch11,save_epoch10,pretrained_G14,pretrained_D15,1 if if_save_latest13=="是"else 0,1 if if_cache_gpu17=="是"else 0)
     print(cmd)
     p = Popen(cmd, shell=True, cwd=now_dir)
     p.wait()
@@ -350,7 +359,7 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
     os.makedirs("%s/logs/%s"%(now_dir,exp_dir1),exist_ok=True)
     #########step1:处理数据
     open("%s/logs/%s/preprocess.log"%(now_dir,exp_dir1), "w").close()
-    cmd="runtime\python.exe trainset_preprocess_pipeline_print.py %s %s %s %s/logs/%s"%(trainset_dir4,sr_dict[sr2],ncpu,now_dir,exp_dir1)
+    cmd=python_cmd + " trainset_preprocess_pipeline_print.py %s %s %s %s/logs/%s "%(trainset_dir4,sr_dict[sr2],ncpu,now_dir,exp_dir1)+str(noparallel)
     yield get_info_str("step1:データを処理中")
     yield get_info_str(cmd)
     p = Popen(cmd, shell=True)
@@ -360,7 +369,7 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
     open("%s/logs/%s/extract_f0_feature.log" % (now_dir, exp_dir1), "w")
     if(if_f0_3=="はい"):
         yield get_info_str("step2a:ピッチの抽出中")
-        cmd="runtime\python.exe extract_f0_print.py %s/logs/%s %s %s"%(now_dir,exp_dir1,np7,f0method8)
+        cmd=python_cmd + " extract_f0_print.py %s/logs/%s %s %s"%(now_dir,exp_dir1,np7,f0method8)
         yield get_info_str(cmd)
         p = Popen(cmd, shell=True,cwd=now_dir)
         p.wait()
@@ -372,7 +381,7 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
     leng=len(gpus)
     ps=[]
     for idx,n_g in enumerate(gpus):
-        cmd="runtime\python.exe extract_feature_print.py %s %s %s %s/logs/%s"%(leng,idx,n_g,now_dir,exp_dir1)
+        cmd=python_cmd + " extract_feature_print.py %s %s %s %s/logs/%s"%(leng,idx,n_g,now_dir,exp_dir1)
         yield get_info_str(cmd)
         p = Popen(cmd, shell=True, cwd=now_dir)#, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=now_dir
         ps.append(p)
@@ -384,7 +393,7 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
     exp_dir="%s/logs/%s"%(now_dir,exp_dir1)
     gt_wavs_dir="%s/0_gt_wavs"%(exp_dir)
     co256_dir="%s/3_feature256"%(exp_dir)
-    if(if_f0_3=="はい"):
+    if(if_f0_3=="是"):
         f0_dir = "%s/2a_f0" % (exp_dir)
         f0nsf_dir="%s/2b-f0nsf"%(exp_dir)
         names=set([name.split(".")[0]for name in os.listdir(gt_wavs_dir)])&set([name.split(".")[0]for name in os.listdir(co256_dir)])&set([name.split(".")[0]for name in os.listdir(f0_dir)])&set([name.split(".")[0]for name in os.listdir(f0nsf_dir)])
@@ -392,7 +401,7 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
         names=set([name.split(".")[0]for name in os.listdir(gt_wavs_dir)])&set([name.split(".")[0]for name in os.listdir(co256_dir)])
     opt=[]
     for name in names:
-        if (if_f0_3 == "はい"):
+        if (if_f0_3 == "是"):
             opt.append("%s/%s.wav|%s/%s.npy|%s/%s.wav.npy|%s/%s.wav.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,f0_dir.replace("\\","\\\\"),name,f0nsf_dir.replace("\\","\\\\"),name,spk_id5))
         else:
             opt.append("%s/%s.wav|%s/%s.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,spk_id5))
@@ -402,7 +411,10 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
         opt.append("%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature256/mute.npy|%s"%(now_dir,sr2,now_dir,spk_id5))
     with open("%s/filelist.txt"%exp_dir,"w")as f:f.write("\n".join(opt))
     yield get_info_str("write filelist done")
-    cmd = "runtime\python.exe train_nsf_sim_cache_sid_load_pretrain.py -e %s -sr %s -f0 %s -bs %s -g %s -te %s -se %s -pg %s -pd %s -l %s -c %s" % (exp_dir1,sr2,1 if if_f0_3=="はい"else 0,batch_size12,gpus16,total_epoch11,save_epoch10,pretrained_G14,pretrained_D15,1 if if_save_latest13=="はい"else 0,1 if if_cache_gpu17=="はい"else 0)
+    if gpus16:
+        cmd = python_cmd + " train_nsf_sim_cache_sid_load_pretrain.py -e %s -sr %s -f0 %s -bs %s -g %s -te %s -se %s -pg %s -pd %s -l %s -c %s" % (exp_dir1,sr2,1 if if_f0_3=="是"else 0,batch_size12,gpus16,total_epoch11,save_epoch10,pretrained_G14,pretrained_D15,1 if if_save_latest13=="是"else 0,1 if if_cache_gpu17=="是"else 0)
+    else:
+        cmd = python_cmd + " train_nsf_sim_cache_sid_load_pretrain.py -e %s -sr %s -f0 %s -bs %s -te %s -se %s -pg %s -pd %s -l %s -c %s" % (exp_dir1,sr2,1 if if_f0_3=="是"else 0,batch_size12,total_epoch11,save_epoch10,pretrained_G14,pretrained_D15,1 if if_save_latest13=="是"else 0,1 if if_cache_gpu17=="是"else 0)
     yield get_info_str(cmd)
     p = Popen(cmd, shell=True, cwd=now_dir)
     p.wait()
@@ -533,7 +545,7 @@ with gr.Blocks() as app:
             with gr.Row():
                 exp_dir1 = gr.Textbox(label="実験名を入力",value="xxxx")
                 sr2 = gr.Radio(label="目標サンプリングレート", choices=["32k","40k","48k"],value="40k", interactive=True)
-                if_f0_3 = gr.Radio(label="モデルにはピッチガイドが付属しているか（歌唱には必須、セリフは省いても可）", choices=["はい","いいえ"],value="はい", interactive=True)
+                if_f0_3 = gr.Radio(label="モデルにはピッチガイドが付属しているか（歌唱には必須、セリフは省いても可）", choices=["是","否"],value="是", interactive=True)
             with gr.Group():#暂时单人的，后面支持最多4人的#数据处理
                 gr.Markdown(value="""
                     step2a：trainingフォルダ内のデコード可能なオーディオファイルをすべて自動的にトラバースし、スライスして正規化し、experimentalディレクトリに2つのwavフォルダを生成；今のところ1人のトレーニングのみサポートされています。
@@ -566,8 +578,8 @@ with gr.Blocks() as app:
                     save_epoch10 = gr.Slider(minimum=0, maximum=50, step=1, label='保存の頻度save_every_epoch', value=5,interactive=True)
                     total_epoch11 = gr.Slider(minimum=0, maximum=1000, step=1, label='トレーニングの総回数total_epoch', value=20,interactive=True)
                     batch_size12 = gr.Slider(minimum=0, maximum=32, step=1, label='グラフィックカードごとのbatch_size', value=4,interactive=True)
-                    if_save_latest13 = gr.Radio(label="ハードディスクの容量を節約するために、最新のckptファイルのみを保存するかどうか", choices=["はい", "いいえ"], value="いいえ", interactive=True)
-                    if_cache_gpu17 = gr.Radio(label="トレーニングセットをビデオメモリにキャッシュするかどうか。10分以下の小さなデータはキャッシュしてトレーニングを高速化できるが、大きなデータはキャッシュするとビデオメモリが圧迫され、あまり高速化できない。", choices=["はい", "いいえ"], value="いいえ", interactive=True)
+                    if_save_latest13 = gr.Radio(label="ハードディスクの容量を節約するために、最新のckptファイルのみを保存するかどうか", choices=["是", "否"], value="否", interactive=True)
+                    if_cache_gpu17 = gr.Radio(label="トレーニングセットをビデオメモリにキャッシュするかどうか。10分以下の小さなデータはキャッシュしてトレーニングを高速化できるが、大きなデータはキャッシュするとビデオメモリが圧迫され、あまり高速化できない。", choices=["是", "否"], value="否", interactive=True)
                 with gr.Row():
                     pretrained_G14 = gr.Textbox(label="学習済みのサブモデルG-pathを読み込む", value="pretrained/f0G40k.pth",interactive=True)
                     pretrained_D15 = gr.Textbox(label="学習済みベースモデルD-pathを読み込む", value="pretrained/f0D40k.pth",interactive=True)
@@ -591,7 +603,7 @@ with gr.Blocks() as app:
                     alpha_a = gr.Slider(minimum=0, maximum=1, label='Aモデルの重さ', value=0.5, interactive=True)
                 with gr.Row():
                     sr_ = gr.Radio(label="目標サンプリングレート", choices=["32k","40k","48k"],value="40k", interactive=True)
-                    if_f0_ = gr.Radio(label="モデルにはピッチガイドが付属しているか", choices=["はい","いいえ"],value="はい", interactive=True)
+                    if_f0_ = gr.Radio(label="モデルにはピッチガイドが付属しているか", choices=["是","否"],value="是", interactive=True)
                     info__ = gr.Textbox(label="配置するモデルの情報", value="", max_lines=8, interactive=True)
                     name_to_save0=gr.Textbox(label="接尾辞のないモデル名の保存", value="", max_lines=1, interactive=True)
                 with gr.Row():
@@ -629,11 +641,11 @@ with gr.Blocks() as app:
                 but9.click(extract_small_model, [ckpt_path2,save_name,sr__,if_f0__,info___], info7)
 
         with gr.TabItem("ピッチカーブ フロントエンド編集者募集"):
-            gr.Markdown(value="""開発チームに連絡647947694""")
-        with gr.TabItem("リアルタイムボイスチェンジプラグイン開発者募集"):
-            gr.Markdown(value="""開発チームに連絡647947694""")
-        with gr.TabItem("交流・質問フィードバックグループ番号をクリック"):
-            gr.Markdown(value="""259421308""")
+            gr.Markdown(value="""開発チームに連絡xxxxx""")
+        with gr.TabItem("コミュニケーションと質問フィードバックのグループ番号をクリック"):
+            gr.Markdown(value="""xxxxx""")
 
-    # app.launch(server_name="0.0.0.0",server_port=7860)
-    app.queue(concurrency_count=511, max_size=1022).launch(server_name="127.0.0.1",inbrowser=True,server_port=7865,quiet=True)
+    if iscolab:
+        app.queue(concurrency_count=511, max_size=1022).launch(share=True)
+    else:
+        app.queue(concurrency_count=511, max_size=1022).launch(server_name="0.0.0.0",inbrowser=True,server_port=listen_port,quiet=True)
