@@ -542,7 +542,7 @@ with gr.Blocks() as app:
                     trainset_dir4 = gr.Textbox(label="トレーニングフォルダーのパスを入力",value="E:\\xxx\\xxxxx")
                     spk_id5 = gr.Slider(minimum=0, maximum=4, step=1, label='スピーカーIDを指定', value=0,interactive=True)
                     but1=gr.Button("データを処理", variant="primary")
-                    info1=gr.Textbox(label="输出信息",value="")
+                    info1=gr.Textbox(label="出力情報",value="")
                     but1.click(preprocess_dataset,[trainset_dir4,exp_dir1,sr2],[info1])
             with gr.Group():
                 gr.Markdown(value="""
