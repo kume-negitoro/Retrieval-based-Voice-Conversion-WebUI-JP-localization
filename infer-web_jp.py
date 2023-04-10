@@ -87,8 +87,8 @@ def vc_single(sid,input_audio,f0_up_key,f0_file,f0_method,file_index,file_big_np
 
 def vc_multi(sid,dir_path,opt_root,paths,f0_up_key,f0_method,file_index,file_big_npy,index_rate):
     try:
-        dir_path=dir_path.strip(" ")#防止小白拷路径头尾带了空格
-        opt_root=opt_root.strip(" ")
+        dir_path=dir_path.strip(" ").strip('"').strip("\n").strip('"').strip(" ")#防止小白拷路径头尾带了空格和"和回车
+        opt_root=opt_root.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
         os.makedirs(opt_root, exist_ok=True)
         try:
             if(dir_path!=""):paths=[os.path.join(dir_path,name)for name in os.listdir(dir_path)]
@@ -114,9 +114,9 @@ def vc_multi(sid,dir_path,opt_root,paths,f0_up_key,f0_method,file_index,file_big
 def uvr(model_name,inp_root,save_root_vocal,paths,save_root_ins):
     infos = []
     try:
-        inp_root = inp_root.strip(" ").strip("\n")
-        save_root_vocal = save_root_vocal.strip(" ").strip("\n")
-        save_root_ins = save_root_ins.strip(" ").strip("\n")
+        inp_root = inp_root.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
+        save_root_vocal = save_root_vocal.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
+        save_root_ins = save_root_ins.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
         pre_fun = _audio_pre_(model_path=os.path.join(weight_uvr5_root,model_name+".pth"), device=device, is_half=is_half)
         if (inp_root != ""):paths = [os.path.join(inp_root, name) for name in os.listdir(inp_root)]
         else:paths = [path.name for path in paths]
@@ -297,6 +297,10 @@ def click_train(exp_dir1,sr2,if_f0_3,spk_id5,save_epoch10,total_epoch11,batch_si
             opt.append("%s/%s.wav|%s/%s.npy|%s/%s.wav.npy|%s/%s.wav.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,f0_dir.replace("\\","\\\\"),name,f0nsf_dir.replace("\\","\\\\"),name,spk_id5))
         else:
             opt.append("%s/%s.wav|%s/%s.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,spk_id5))
+    if (if_f0_3 == "はい"):
+        opt.append("%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature256/mute.npy|%s/logs/mute/2a_f0/mute.wav.npy|%s/logs/mute/2b-f0nsf/mute.wav.npy|%s"%(now_dir,sr2,now_dir,now_dir,now_dir,spk_id5))
+    else:
+        opt.append("%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature256/mute.npy|%s"%(now_dir,sr2,now_dir,spk_id5))
     with open("%s/filelist.txt"%exp_dir,"w")as f:f.write("\n".join(opt))
     print("write filelist done")
     #生成config#无需生成config
@@ -392,6 +396,10 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
             opt.append("%s/%s.wav|%s/%s.npy|%s/%s.wav.npy|%s/%s.wav.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,f0_dir.replace("\\","\\\\"),name,f0nsf_dir.replace("\\","\\\\"),name,spk_id5))
         else:
             opt.append("%s/%s.wav|%s/%s.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,spk_id5))
+    if (if_f0_3 == "はい"):
+        opt.append("%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature256/mute.npy|%s/logs/mute/2a_f0/mute.wav.npy|%s/logs/mute/2b-f0nsf/mute.wav.npy|%s"%(now_dir,sr2,now_dir,now_dir,now_dir,spk_id5))
+    else:
+        opt.append("%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature256/mute.npy|%s"%(now_dir,sr2,now_dir,spk_id5))
     with open("%s/filelist.txt"%exp_dir,"w")as f:f.write("\n".join(opt))
     yield get_info_str("write filelist done")
     cmd = "runtime\python.exe train_nsf_sim_cache_sid_load_pretrain.py -e %s -sr %s -f0 %s -bs %s -g %s -te %s -se %s -pg %s -pd %s -l %s -c %s" % (exp_dir1,sr2,1 if if_f0_3=="はい"else 0,batch_size12,gpus16,total_epoch11,save_epoch10,pretrained_G14,pretrained_D15,1 if if_save_latest13=="はい"else 0,1 if if_cache_gpu17=="はい"else 0)
@@ -464,11 +472,11 @@ with gr.Blocks() as app:
                 )
             with gr.Group():
                 gr.Markdown(value="""
-                    男性から女性へは+12key、女性から男性へは-12keyを推奨、モデルの音域が曲から離れている場合は、自分で正しい音域に調整することも可能。
+                    男性から女性へは+12key、女性から男性へは-12keyを推奨、モデルの音域が変換元と離れている場合は、自分で正しい音域に調整することも可能。
                     """)
                 with gr.Row():
                     with gr.Column():
-                        vc_transform0 = gr.Number(label="キー変更（整数，半音数，半音12上げる、半音12下げる）", value=0)
+                        vc_transform0 = gr.Number(label="キー変更（整数，半音，±12）", value=0)
                         input_audio0 = gr.Textbox(label="処理対象のオーディオファイルのパスを入力(デフォルトは正しいフォーマットの例)",value="E:\codes\py39\\vits_vc_gpu_train\\todo-songs\冬之花clip1.wav")
                         f0method0=gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで速度を上げることができる、harvestは低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
                     with gr.Column():
@@ -479,7 +487,7 @@ with gr.Blocks() as app:
                     but0=gr.Button("変換", variant="primary")
                     with gr.Column():
                         vc_output1 = gr.Textbox(label="出力情報")
-                        vc_output2 = gr.Audio(label="オーディオ出力(右下の3点、ダウンロード可能)")
+                        vc_output2 = gr.Audio(label="オーディオ出力(右側の縦三点リーダーからダウンロード可能)")
                     but0.click(vc_single, [spk_item, input_audio0, vc_transform0,f0_file,f0method0,file_index1,file_big_npy1,index_rate1], [vc_output1, vc_output2])
             with gr.Group():
                 gr.Markdown(value="""
@@ -487,7 +495,7 @@ with gr.Blocks() as app:
                     """)
                 with gr.Row():
                     with gr.Column():
-                        vc_transform1 = gr.Number(label="キー変更（整数，半音数，半音12上げる、半音12下げる）", value=0)
+                        vc_transform1 = gr.Number(label="キー変更（整数，半音，±12）", value=0)
                         opt_input = gr.Textbox(label="出力フォルダの指定",value="opt")
                         f0method1=gr.Radio(label="ピッチ抽出アルゴリズムの選択：入力歌声はpmで速度を上げることができる、harvestは低音は良いが、非常に遅い", choices=["pm","harvest"],value="pm", interactive=True)
                     with gr.Column():
@@ -504,8 +512,8 @@ with gr.Blocks() as app:
             with gr.Group():
                 gr.Markdown(value="""
                     UVR5モデルによる伴奏ボーカル分離バッチ処理。<br>
-                    ハーモニー用HP2なし、ハーモニー付きで抽出する人の声はハーモニー用HP5不要<br>
-                    適切なフォルダパスフォーマットの例:E:\codes\py39\\vits_vc_gpu\白鹭霜华测试样例(ファイルマネージャのアドレスバーにコピー)
+                    HP2はハモリなしで使用、HP5はハモリありで使用し、ハモリを除去したボーカルを抽出<br>
+                    適切なフォルダパスの例:E:\codes\py39\\vits_vc_gpu\白鹭霜华测试样例(ファイルマネージャのアドレスバーにコピー)
                     """)
                 with gr.Row():
                     with gr.Column():
@@ -525,7 +533,7 @@ with gr.Blocks() as app:
             with gr.Row():
                 exp_dir1 = gr.Textbox(label="実験名を入力",value="xxxx")
                 sr2 = gr.Radio(label="目標サンプリングレート", choices=["32k","40k","48k"],value="40k", interactive=True)
-                if_f0_3 = gr.Radio(label="モデルにはピッチガイドが付属しているか（ボーカルは必須、声は省いても可）", choices=["はい","いいえ"],value="はい", interactive=True)
+                if_f0_3 = gr.Radio(label="モデルにはピッチガイドが付属しているか（歌唱には必須、セリフは省いても可）", choices=["はい","いいえ"],value="はい", interactive=True)
             with gr.Group():#暂时单人的，后面支持最多4人的#数据处理
                 gr.Markdown(value="""
                     step2a：trainingフォルダ内のデコード可能なオーディオファイルをすべて自動的にトラバースし、スライスして正規化し、experimentalディレクトリに2つのwavフォルダを生成；今のところ1人のトレーニングのみサポートされています。
@@ -534,7 +542,7 @@ with gr.Blocks() as app:
                     trainset_dir4 = gr.Textbox(label="トレーニングフォルダーのパスを入力",value="E:\\xxx\\xxxxx")
                     spk_id5 = gr.Slider(minimum=0, maximum=4, step=1, label='スピーカーIDを指定', value=0,interactive=True)
                     but1=gr.Button("データを処理", variant="primary")
-                    info1=gr.Textbox(label="出力情報",value="")
+                    info1=gr.Textbox(label="输出信息",value="")
                     but1.click(preprocess_dataset,[trainset_dir4,exp_dir1,sr2],[info1])
             with gr.Group():
                 gr.Markdown(value="""
@@ -556,8 +564,8 @@ with gr.Blocks() as app:
                     """)
                 with gr.Row():
                     save_epoch10 = gr.Slider(minimum=0, maximum=50, step=1, label='保存の頻度save_every_epoch', value=5,interactive=True)
-                    total_epoch11 = gr.Slider(minimum=0, maximum=100, step=1, label='トレーニングの総回数total_epoch', value=10,interactive=True)
-                    batch_size12 = gr.Slider(minimum=0, maximum=32, step=1, label='batch_size', value=4,interactive=True)
+                    total_epoch11 = gr.Slider(minimum=0, maximum=1000, step=1, label='トレーニングの総回数total_epoch', value=20,interactive=True)
+                    batch_size12 = gr.Slider(minimum=0, maximum=32, step=1, label='グラフィックカードごとのbatch_size', value=4,interactive=True)
                     if_save_latest13 = gr.Radio(label="ハードディスクの容量を節約するために、最新のckptファイルのみを保存するかどうか", choices=["はい", "いいえ"], value="いいえ", interactive=True)
                     if_cache_gpu17 = gr.Radio(label="トレーニングセットをビデオメモリにキャッシュするかどうか。10分以下の小さなデータはキャッシュしてトレーニングを高速化できるが、大きなデータはキャッシュするとビデオメモリが圧迫され、あまり高速化できない。", choices=["はい", "いいえ"], value="いいえ", interactive=True)
                 with gr.Row():
@@ -624,7 +632,7 @@ with gr.Blocks() as app:
             gr.Markdown(value="""開発チームに連絡647947694""")
         with gr.TabItem("リアルタイムボイスチェンジプラグイン開発者募集"):
             gr.Markdown(value="""開発チームに連絡647947694""")
-        with gr.TabItem("コミュニケーションと質問フィードバックのグループ番号をクリック"):
+        with gr.TabItem("交流・質問フィードバックグループ番号をクリック"):
             gr.Markdown(value="""259421308""")
 
     # app.launch(server_name="0.0.0.0",server_port=7860)
