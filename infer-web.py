@@ -88,8 +88,8 @@ def vc_single(sid,input_audio,f0_up_key,f0_file,f0_method,file_index,file_big_np
 
 def vc_multi(sid,dir_path,opt_root,paths,f0_up_key,f0_method,file_index,file_big_npy,index_rate):
     try:
-        dir_path=dir_path.strip(" ")#防止小白拷路径头尾带了空格
-        opt_root=opt_root.strip(" ")
+        dir_path=dir_path.strip(" ").strip('"').strip("\n").strip('"').strip(" ")#防止小白拷路径头尾带了空格和"和回车
+        opt_root=opt_root.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
         os.makedirs(opt_root, exist_ok=True)
         try:
             if(dir_path!=""):paths=[os.path.join(dir_path,name)for name in os.listdir(dir_path)]
@@ -115,9 +115,9 @@ def vc_multi(sid,dir_path,opt_root,paths,f0_up_key,f0_method,file_index,file_big
 def uvr(model_name,inp_root,save_root_vocal,paths,save_root_ins):
     infos = []
     try:
-        inp_root = inp_root.strip(" ").strip("\n")
-        save_root_vocal = save_root_vocal.strip(" ").strip("\n")
-        save_root_ins = save_root_ins.strip(" ").strip("\n")
+        inp_root = inp_root.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
+        save_root_vocal = save_root_vocal.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
+        save_root_ins = save_root_ins.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
         pre_fun = _audio_pre_(model_path=os.path.join(weight_uvr5_root,model_name+".pth"), device=device, is_half=is_half)
         if (inp_root != ""):paths = [os.path.join(inp_root, name) for name in os.listdir(inp_root)]
         else:paths = [path.name for path in paths]
@@ -303,6 +303,10 @@ def click_train(exp_dir1,sr2,if_f0_3,spk_id5,save_epoch10,total_epoch11,batch_si
             opt.append("%s/%s.wav|%s/%s.npy|%s/%s.wav.npy|%s/%s.wav.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,f0_dir.replace("\\","\\\\"),name,f0nsf_dir.replace("\\","\\\\"),name,spk_id5))
         else:
             opt.append("%s/%s.wav|%s/%s.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,spk_id5))
+    if (if_f0_3 == "是"):
+        opt.append("%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature256/mute.npy|%s/logs/mute/2a_f0/mute.wav.npy|%s/logs/mute/2b-f0nsf/mute.wav.npy|%s"%(now_dir,sr2,now_dir,now_dir,now_dir,spk_id5))
+    else:
+        opt.append("%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/2b-f0nsf/mute.wav.npy|%s"%(now_dir,sr2,now_dir,spk_id5))
     with open("%s/filelist.txt"%exp_dir,"w")as f:f.write("\n".join(opt))
     print("write filelist done")
     #生成config#无需生成config
@@ -402,6 +406,10 @@ def train1key(exp_dir1, sr2, if_f0_3, trainset_dir4, spk_id5, gpus6, np7, f0meth
             opt.append("%s/%s.wav|%s/%s.npy|%s/%s.wav.npy|%s/%s.wav.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,f0_dir.replace("\\","\\\\"),name,f0nsf_dir.replace("\\","\\\\"),name,spk_id5))
         else:
             opt.append("%s/%s.wav|%s/%s.npy|%s"%(gt_wavs_dir.replace("\\","\\\\"),name,co256_dir.replace("\\","\\\\"),name,spk_id5))
+    if (if_f0_3 == "是"):
+        opt.append("%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature256/mute.npy|%s/logs/mute/2a_f0/mute.wav.npy|%s/logs/mute/2b-f0nsf/mute.wav.npy|%s"%(now_dir,sr2,now_dir,now_dir,now_dir,spk_id5))
+    else:
+        opt.append("%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/2b-f0nsf/mute.wav.npy|%s"%(now_dir,sr2,now_dir,spk_id5))
     with open("%s/filelist.txt"%exp_dir,"w")as f:f.write("\n".join(opt))
     yield get_info_str("write filelist done")
     if gpus16:
@@ -569,8 +577,8 @@ with gr.Blocks() as app:
                     """)
                 with gr.Row():
                     save_epoch10 = gr.Slider(minimum=0, maximum=50, step=1, label='保存频率save_every_epoch', value=5,interactive=True)
-                    total_epoch11 = gr.Slider(minimum=0, maximum=100, step=1, label='总训练轮数total_epoch', value=10,interactive=True)
-                    batch_size12 = gr.Slider(minimum=0, maximum=32, step=1, label='batch_size', value=4,interactive=True)
+                    total_epoch11 = gr.Slider(minimum=0, maximum=1000, step=1, label='总训练轮数total_epoch', value=20,interactive=True)
+                    batch_size12 = gr.Slider(minimum=0, maximum=32, step=1, label='每张显卡的batch_size', value=4,interactive=True)
                     if_save_latest13 = gr.Radio(label="是否仅保存最新的ckpt文件以节省硬盘空间", choices=["是", "否"], value="否", interactive=True)
                     if_cache_gpu17 = gr.Radio(label="是否缓存所有训练集至显存。10min以下小数据可缓存以加速训练，大数据缓存会炸显存也加不了多少速", choices=["是", "否"], value="否", interactive=True)
                 with gr.Row():
